@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import * as nodemailer from "nodemailer";
 @Injectable()
 export class MailerService {
+    
 
     private async transporter() {
         const testAccount = await nodemailer.createTestAccount();
@@ -38,6 +39,20 @@ export class MailerService {
 
                 <p> Secret code <strong>${code}</strong></p>
                 <p>Code will expire in 15 minutes</p>
+            `
+
+        })
+    }
+    async sendUpdateConfirmation(email: string) {
+        (await this.transporter()).sendMail({
+            from: "app@localhost.com",
+            to: email,
+            subject: "Password updated",
+            html: `
+                
+                <h3>Password updated</h3>
+
+                
             `
 
         })

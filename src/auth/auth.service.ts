@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { SignupDto } from './dto/signupDTO';
 import { SigninDto } from './dto/signinDTO';
+import { ResetPasswordConfirmationDTO } from './dto/resetPasswordConfirmationDTO';
 
 import * as bcrypt from "bcrypt"
 import * as speakeasy from "speakeasy"
@@ -12,6 +13,7 @@ import { resetPasswordDTO } from './dto/resetPasswordDTO';
 
 @Injectable()
 export class AuthService {
+    
     
 
 
@@ -77,10 +79,28 @@ export class AuthService {
         const url ="http://localhost:3000/auth/reset-password-confirmation"
         await this.emailService.sendResetPassword(email,url,code)
         return {data : "Reset password mail has been send"}
+    }
+
+    async resetConfirmation(resetPasswordConfirmationDTO:ResetPasswordConfirmationDTO) {
+        const{email, password, code } =resetPasswordConfirmationDTO
+        const user = await this.prismaService.uSER.findUnique({ where: { email } })
+        if (!user) throw new ConflictException("User not found");
+
+        const match =speakeasy.totp.verify({            
+            secret : this.configService.get("OTP_CODE"),
+            token : code,
+            digits : 5,
+            step : 60*15,
+            encoding : "base32"
 
 
+        });
+        if(!match) throw new UnauthorizedException("Invalid/expired token")
+            const hash = await bcrypt.hash(password,10)
+            await this.prismaService.uSER.update({where : {email}, data : {password : hash}})
+            await this.emailService.sendUpdateConfirmation(email)
 
-
+            return {data : "password updated"}
     }
     
 
