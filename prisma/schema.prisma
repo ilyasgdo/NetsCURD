@@ -13,12 +13,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model USER{
-  userId Int @id @default(autoincrement())
-  username String @db.VarChar(65)
-  email  String @db.VarChar(255) @unique
-  password String @db.VarChar(65) 
-  createdAt DateTime @default(now())
-  updateAt DateTime @updatedAt
+model USER {
+  userId    Int       @id @default(autoincrement())
+  username  String    @db.VarChar(65)
+  email     String    @unique @db.VarChar(255)
+  password  String    @db.VarChar(65)
+  createdAt DateTime  @default(now())
+  updateAt  DateTime  @updatedAt
+  posts     Post[]    @relation("user_posts")
+  Comment   Comment[] @relation("user_comments")
+} 
 
+model Post {
+  postId Int    @id @default(autoincrement())
+  title  String @db.VarChar(255)
+  body   String
+  userId Int
+  user   USER   @relation("user_posts", fields: [userId], references: [userId], onUpdate: Cascade, onDelete: Cascade)
+
+  Comment Comment[] @relation("posts_comment")
+}
+
+model Comment {
+  commentId Int    @id @default(autoincrement())
+  content   String @db.VarChar(255)
+  postId    Int
+  userId    Int
+  post      Post   @relation("posts_comment", fields: [postId], references: [postId], onUpdate: Cascade, onDelete: Cascade)
+  user      USER   @relation("user_comments", fields: [userId], references: [userId], onUpdate: Cascade, onDelete: Cascade)
 }

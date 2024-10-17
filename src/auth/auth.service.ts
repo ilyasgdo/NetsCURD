@@ -10,11 +10,12 @@ import { MailerService } from 'src/mailer/mailer.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { resetPasswordDTO } from './dto/resetPasswordDTO';
+import { DeleteAccountDto } from './dto/deleteAccountDto';
 
 @Injectable()
 export class AuthService {
-    
-    
+
+
 
 
 
@@ -56,8 +57,8 @@ export class AuthService {
             secret: this.configService.get('SECRET_KEY')
         })
         return {
-            token,user : {
-                username : user.username,
+            token, user: {
+                username: user.username,
                 mail: user.email
             }
         }
@@ -66,43 +67,53 @@ export class AuthService {
     }
 
     async resetPassword(resetPasswordDTO: resetPasswordDTO) {
-        
+
         const { email } = resetPasswordDTO
         const user = await this.prismaService.uSER.findUnique({ where: { email } })
         if (!user) throw new ConflictException("User not found");
-        const code =  speakeasy.totp({
-            secret : this.configService.get("OTP_CODE"),
-            digits : 5,
-            step : 60*15,
-            encoding : "base32"
+        const code = speakeasy.totp({
+            secret: this.configService.get("OTP_CODE"),
+            digits: 5,
+            step: 60 * 15,
+            encoding: "base32"
         })
-        const url ="http://localhost:3000/auth/reset-password-confirmation"
-        await this.emailService.sendResetPassword(email,url,code)
-        return {data : "Reset password mail has been send"}
+        const url = "http://localhost:3000/auth/reset-password-confirmation"
+        await this.emailService.sendResetPassword(email, url, code)
+        return { data: "Reset password mail has been send" }
     }
 
-    async resetConfirmation(resetPasswordConfirmationDTO:ResetPasswordConfirmationDTO) {
-        const{email, password, code } =resetPasswordConfirmationDTO
+    async resetConfirmation(resetPasswordConfirmationDTO: ResetPasswordConfirmationDTO) {
+        const { email, password, code } = resetPasswordConfirmationDTO
         const user = await this.prismaService.uSER.findUnique({ where: { email } })
         if (!user) throw new ConflictException("User not found");
 
-        const match =speakeasy.totp.verify({            
-            secret : this.configService.get("OTP_CODE"),
-            token : code,
-            digits : 5,
-            step : 60*15,
-            encoding : "base32"
+        const match = speakeasy.totp.verify({
+            secret: this.configService.get("OTP_CODE"),
+            token: code,
+            digits: 5,
+            step: 60 * 15,
+            encoding: "base32"
 
 
         });
-        if(!match) throw new UnauthorizedException("Invalid/expired token")
-            const hash = await bcrypt.hash(password,10)
-            await this.prismaService.uSER.update({where : {email}, data : {password : hash}})
-            await this.emailService.sendUpdateConfirmation(email)
+        if (!match) throw new UnauthorizedException("Invalid/expired token")
+        const hash = await bcrypt.hash(password, 10)
+        await this.prismaService.uSER.update({ where: { email }, data: { password: hash } })
+        await this.emailService.sendUpdateConfirmation(email)
 
-            return {data : "password updated"}
+        return { data: "password updated" }
     }
-    
+
+    async deleteAccount(userId: number, deleteAccountDto: DeleteAccountDto) {
+        const { password } = deleteAccountDto
+        const user = await this.prismaService.uSER.findUnique({ where: { userId } })
+        if (!user) throw new ConflictException("User not found");
+        const match = await bcrypt.compare(password, user.password);
+        await this.prismaService.uSER.delete({ where: { userId } })
+        return { data: 'User successfully deleted' }
+    }
+
+
 
 
     testt() {
